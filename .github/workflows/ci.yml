@@ -1,0 +1,36 @@
+name: Intégration Continue
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  pipeline-ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Récupération du code source
+        uses: actions/checkout@v3
+
+      - name: Installation des dépendances nécessaires
+        run: sudo apt-get update && sudo apt-get install -y unzip zip wget curl
+
+      - name: Compilation du projet et exécution des tests unitaires
+        run: |
+          # Suppression de la variable GITHUB_ACTION pour éviter les erreurs liées aux tests mockés avec WireMock.
+          # SonarScanner (sonar-scanner-engine/src/main/java/org/sonar/scanner/bootstrap/ScannerMain.java) détecte 
+          # GitHub Actions et ajoute des paramètres supplémentaires aux requêtes API,
+          # ce qui cause des erreurs dans les tests qui vérifient des requêtes précises.
+          unset GITHUB_ACTION
+          # Cette commande compile et exécute des tests unitaires
+          ./gradlew build
+
+      - name: Extraction de SonarQube à partir du build
+        run: unzip sonar-application/build/distributions/sonar-application-25.2-SNAPSHOT.zip 
+
+      - name: Lancement de SonarQube
+        run: ./sonarqube-25.2-SNAPSHOT/bin/linux-x86-64/sonar.sh start
